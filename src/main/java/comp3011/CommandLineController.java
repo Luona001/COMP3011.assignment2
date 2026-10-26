@@ -32,6 +32,7 @@ public class CommandLineController {
     private Integer displayId;
     private File videoFile;
     private String errorMessage;
+    private final List<FrameProcessorType> frameProcessors = new ArrayList<>();
 
     public CommandLineController(String[] args) {
         this.args = args.clone();
@@ -71,27 +72,84 @@ public class CommandLineController {
     public boolean shouldLaunchApplication() {
         return errorMessage == null && videoFile != null;
     }
+    
+    public List<FrameProcessorType> getFrameProcessorTypes() {
+        return List.copyOf(frameProcessors);
+    }
 
     private void parse() {
         List<String> videoFiles = new ArrayList<>();
         for (String arg : args) {
-            if ("-h".equals(arg) || "--help".equals(arg)) {
-                helpRequested = true;
-            } else if ("-a".equals(arg) || "--audio".equals(arg)) {
-                audioRequested = true;
-            } else if ("-x".equals(arg) || "--maximise".equals(arg)) {
-                maximiseRequested = true;
-            } else if ("-1".equals(arg) || "--monitor-1".equals(arg)) {
-                setDisplayId(1);
-            } else if ("-2".equals(arg) || "--monitor-2".equals(arg)) {
-                setDisplayId(2);
+            if (arg.startsWith("--")) {
+                if (!parseLongOption(arg)) {
+                    return;
+                }
+            } else if (arg.startsWith("-") && arg.length() > 2) {
+                if (!parseStackedShortOptions(arg)) {
+                    return;
+                }
             } else if (arg.startsWith("-")) {
-                errorMessage = "Unknown option: " + arg;
+                if (!parseSingleShortOption(arg)) {
+                    return;
+                }
             } else {
                 videoFiles.add(arg);
             }
         }
+        validateVideoFiles(videoFiles);
+    }
 
+    private boolean parseLongOption(String arg) {
+        switch (arg) {
+            case "--help":      helpRequested = true;     return true;
+            case "--audio":     audioRequested = true;    return true;
+            case "--maximise":  maximiseRequested = true; return true;
+            case "--monitor-1": setDisplayId(1);          return true;
+            case "--monitor-2": setDisplayId(2);          return true;
+            default:
+                FrameProcessorType type = FrameProcessorType.findByLongFlag(arg);
+                if (type == null) {
+                    errorMessage = "Unknown option: " + arg;
+                    return false;
+                }
+                frameProcessors.add(type);
+                return true;
+        }
+    }
+
+    private boolean parseSingleShortOption(String arg) {
+        char c = arg.charAt(1);
+        switch (c) {
+            case 'h': helpRequested = true;      return true;
+            case 'a': audioRequested = true;     return true;
+            case 'x': maximiseRequested = true;  return true;
+            case '1': setDisplayId(1);           return true;
+            case '2': setDisplayId(2);           return true;
+            default:
+                FrameProcessorType type = FrameProcessorType.findByShortFlag(c);
+                if (type == null) {
+                    errorMessage = "Unknown option: " + arg;
+                    return false;
+                }
+                frameProcessors.add(type);
+                return true;
+        }
+    }
+
+    private boolean parseStackedShortOptions(String arg) {
+        for (int i = 1; i < arg.length(); i++) {
+            char c = arg.charAt(i);
+            FrameProcessorType type = FrameProcessorType.findByShortFlag(c);
+            if (type == null) {
+                errorMessage = "Unknown option: -" + c;
+                return false;
+            }
+            frameProcessors.add(type);
+        }
+        return true;
+    }
+
+    private void validateVideoFiles(List<String> videoFiles) {
         if (videoFiles.size() > 1) {
             errorMessage = "Usage: VideoPlayer [options] [video-file]";
         } else if (videoFiles.size() == 1) {

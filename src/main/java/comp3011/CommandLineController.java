@@ -173,14 +173,28 @@ public class CommandLineController {
         this.displayId = displayId;
     }
 
+    static String buildHelp() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Usage: VideoPlayer [options] [video-file]\n");
+        sb.append("\n");
+        sb.append("Options:\n");
+        sb.append("  -h, --help         Show this help message\n");
+        sb.append("  -a, --audio        Play audio\n");
+        sb.append("  -x, --maximise     Open the player maximised\n");
+        sb.append("  -1, --monitor-1    Open the player on display 1\n");
+        sb.append("  -2, --monitor-2    Open the player on display 2\n");
+        sb.append("\n");
+        sb.append("Frame processors:\n");
+        for (FrameProcessorType type : FrameProcessorType.values()) {
+            sb.append(type.helpLine()).append('\n');
+        }
+        sb.append("Frame processors are applied in command-line order and may be repeated.\n");
+        sb.append("Example: -nssnfwyvdjmbp numbers, scratches twice, numbers again, flickers,\n");
+        sb.append("converts, warms, vignettes, dusts, jitters, mottles, bleeds, then peppers.\n");
+        return sb.toString();
+    }
+
     private void printHelp() {
-        System.out.println("Usage: VideoPlayer [options] [video-file]");
-        System.out.println();
-        System.out.println("Options:");
-        System.out.println("  -h, --help         Show this help message");
-        System.out.println("  -a, --audio        Play audio");
-        System.out.println("  -x, --maximise     Open the player maximised");
-        System.out.println("  -1, --monitor-1    Open the player on display 1");
-        System.out.println("  -2, --monitor-2    Open the player on display 2");
+        System.out.print(buildHelp());
     }
 }

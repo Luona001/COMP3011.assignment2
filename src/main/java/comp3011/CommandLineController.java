@@ -77,27 +77,37 @@ public class CommandLineController {
         return List.copyOf(frameProcessors);
     }
 
-    private void parse() {
-        List<String> videoFiles = new ArrayList<>();
-        for (String arg : args) {
-            if (arg.startsWith("--")) {
-                if (!parseLongOption(arg)) {
-                    return;
-                }
-            } else if (arg.startsWith("-") && arg.length() > 2) {
-                if (!parseStackedShortOptions(arg)) {
-                    return;
-                }
-            } else if (arg.startsWith("-")) {
-                if (!parseSingleShortOption(arg)) {
-                    return;
-                }
-            } else {
-                videoFiles.add(arg);
-            }
+
+private void parse() {
+    for (String arg : args) {
+        if ("--help".equals(arg) || "-h".equals(arg)) {
+            helpRequested = true;
+            return;
         }
-        validateVideoFiles(videoFiles);
     }
+
+    List<String> videoFiles = new ArrayList<>();
+
+    for (String arg : args) {
+        if (arg.startsWith("--")) {
+            if (!parseLongOption(arg)) {
+                return;
+            }
+        } else if (arg.startsWith("-") && arg.length() > 2) {
+            if (!parseStackedShortOptions(arg)) {
+                return;
+            }
+        } else if (arg.startsWith("-")) {
+            if (!parseSingleShortOption(arg)) {
+                return;
+            }
+        } else {
+            videoFiles.add(arg);
+        }
+    }
+
+    validateVideoFiles(videoFiles);
+}
 
     private boolean parseLongOption(String arg) {
         switch (arg) {
@@ -188,6 +198,7 @@ public class CommandLineController {
         for (FrameProcessorType type : FrameProcessorType.values()) {
             sb.append(type.helpLine()).append('\n');
         }
+        sb.append("\n"); 
         sb.append("Frame processors are applied in command-line order and may be repeated.\n");
         sb.append("Example: -nssnfwyvdjmbp numbers, scratches twice, numbers again, flickers,\n");
         sb.append("converts, warms, vignettes, dusts, jitters, mottles, bleeds, then peppers.\n");

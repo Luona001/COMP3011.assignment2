@@ -30,6 +30,8 @@ import javafx.scene.image.Image;
 
 import comp3011.pipeline.PipelineFrame;
 import comp3011.pipeline.VideoDecoder;
+import comp3011.pipeline.EffectPipeline;
+import comp3011.pipeline.FinishedFrame;
 
 /**
  * The model part of the video player model-view-controller architecture.
@@ -50,8 +52,10 @@ public class VideoPlayerModel {
     private static final long AUDIO_LEAD_NS = 30_000_000L;
 
     private BlockingQueue<PipelineFrame> decoderQueue;
+    private BlockingQueue<FinishedFrame> displayQueue;
+    private EffectPipeline effectPipeline; 
     private VideoDecoder decoder;
-    private PipelineFrame heldFrame;
+    private FinishedFrame heldFrame;
     private final List<FrameProcessor> frameProcessors;
     private final ConcurrentLinkedQueue<PendingAudio> pendingAudio = new ConcurrentLinkedQueue<>();
     private final BiConsumer<Integer, Integer> videoSizeChangedHandler;
@@ -230,6 +234,8 @@ public class VideoPlayerModel {
             clock.reset(initialPositionUs);
             playbackOpen = true;
             decoderQueue = new ArrayBlockingQueue<>(2);
+            displayQueue = new ArrayBlockingQueue<>(2);
+            effectPipeline = new EffectPipeline(frameProcessors, clock, epoch, decoderQueue, displayQueue);
             decoder = new VideoDecoder(
                     grabber,
                     audioAvailable,
@@ -300,8 +306,8 @@ public class VideoPlayerModel {
 
         // Task (2)
         if (heldFrame == null) {
-            PipelineFrame polled;
-            while ((polled = decoderQueue.poll()) != null) {
+            FinishedFrame polled;
+            while ((polled = displayQueue.poll()) != null) {
                 if (polled.epoch() == epoch.get()) {
                     heldFrame = polled;
                     break;
@@ -320,18 +326,11 @@ public class VideoPlayerModel {
     }
 
     private void displayHeldFrame() {
-        PipelineFrame frame = heldFrame;
+        FinishedFrame frame = heldFrame;
         heldFrame = null;
-        long preparedAtNs = System.nanoTime();
 
-        try {
-            processFrame(frame.frame(), new InfoFrame(frame.frameNumber(), frame.mediaTimestampUs()));
-        } catch (Exception e) {
-            handlePlaybackError(e);
-            return;
-        }
         if (intFrameRate > 0 && frame.frameNumber() % intFrameRate == 0) {
-            long remainingUs = (frame.targetTimeNs() - preparedAtNs) / 1_000L;
+            long remainingUs = (frame.targetTimeNs() - frame.preparedAtNs()) / 1_000L;
             if (remainingUs < 0) {
                 System.out.printf("Frame headroom is \u001B[31m%5dus\u001B[0m out of %dus spare.%n",
                         remainingUs,
@@ -344,7 +343,7 @@ public class VideoPlayerModel {
         }
 
         Image image = converter.convert(frame.frame());
-        clock.setPositionUs(clock.logicalTimestampUs(frame.mediaTimestampUs()));
+        clock.setPositionUs(frame.logicalTimestampUs());
         relativeSeekBaseUs = NO_SEEK_REQUEST;
 
         notifyFrameReady(image);
@@ -423,6 +422,11 @@ public class VideoPlayerModel {
         clock.reset(clock.positionUs());
         audioAvailable = false;
 
+        if (effectPipeline != null) {
+            effectPipeline.shutdown();
+            effectPipeline = null;
+        }
+
         if (decoder != null) {
             decoder.requestStop();
             try {
@@ -433,6 +437,8 @@ public class VideoPlayerModel {
             decoder = null;
         }
         decoderQueue = null;
+        displayQueue = null;
+        heldFrame = null;
 
         if (audioPlayer != null) {
             audioPlayer.close();
@@ -487,12 +493,6 @@ public class VideoPlayerModel {
         }
 
         return Math.max(0, durationUs - frameDurationUs);
-    }
-
-    private void processFrame(Frame frame, InfoFrame info) throws Exception {
-        for (FrameProcessor processor : frameProcessors) {
-            processor.process(frame, info);
-        }
     }
 
     private void flushAudioOutput() {

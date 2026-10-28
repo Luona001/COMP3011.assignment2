@@ -37,11 +37,13 @@ import comp3011.pipeline.FinishedFrame;
  * The model part of the video player model-view-controller architecture.
  *
  * <p>
- * Owns the FFmpeg decoder, playback clock, seeking logic, audio scheduling,
- * and frame processing - which it all manages through cooperative multi-tasking
- * on a single thread. It publishes decoded frames and playback state through
- * callbacks supplied by its owning {@link VideoPlayerController}, keeping it
- * decoupled from the JavaFX view.
+ * Owns the playback clock, seeking logic, audio scheduling and the frame
+ * display loop on the JavaFX thread. Video decoding runs on a dedicated
+ * decoder thread that owns the FFmpeg decoder exclusively, and frame
+ * effects run across a pool of pipeline stage threads, so heavy effect
+ * chains no longer stall the GUI. It publishes decoded frames and playback
+ * state through callbacks supplied by its owning {@link VideoPlayerController},
+ * keeping it decoupled from the JavaFX view.
  * </p>
  */
 public class VideoPlayerModel {
@@ -292,10 +294,9 @@ public class VideoPlayerModel {
 
     // This is called on a heart beat by the GUI thread. We want to be co-operative here by (a) not blocking, and (b)
     // getting our required work out of the way quickly so that we can return control flow to the JavaFX event loop for
-    // handling user interaction with the GUI and rendering. We have three jobs: (1) keep audio flowing if sound is on,
-    // (2) display a frame if it is due and (3) prepare the next frame if we're in the window after the previous frame
-    // has gone to the display. We don't buffer frames here, just handling them one at a time. Not a great architecture,
-    // living on the edge a bit, but can't do much better on a single thread.
+    // handling user interaction with the GUI and rendering. We have two jobs: (1) keep audio flowing if sound is on,
+    // and (2) display a frame if it is due. Decoding and frame effects already happened on their own threads before
+    // frames land in the display queue, so we only poll here - we never do the heavy lifting ourselves.
     private void pumpPlayback(long now) {
         if (!playbackOpen) {
             return;
@@ -317,9 +318,7 @@ public class VideoPlayerModel {
 
         // Task (3). We'll try and be nice to the GUI event loop here by queueing the prepareNextFrame call rather than
         // hogging the thread and doing it here, hence the tricky callback and use of prepareNextFrameQueued. Feel free
-        // to replace this whole block with simple linear control flow logic
-        // such as: if (!pauseRequested && preparedFrame == null) prepareNextFrame();
-        // to compare.
+        // to replace this whole block with simple linear control flow logic to compare.
         if (heldFrame != null && heldFrame.targetTimeNs() <= now) {
             displayHeldFrame();
         }

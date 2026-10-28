@@ -5,12 +5,12 @@ import java.nio.Buffer;
 
 import org.bytedeco.javacv.Frame;
 
-final class FrameCopy {
+public final class FrameCopy {
 
     private FrameCopy() {
     }
 
-    static Frame imageCopyOf(Frame src) {
+    public static Frame imageCopyOf(Frame src) {
         Frame dst = new Frame(
                 src.imageWidth,
                 src.imageHeight,

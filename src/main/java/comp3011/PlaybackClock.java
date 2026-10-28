@@ -1,6 +1,6 @@
 package comp3011;
 
-final class PlaybackClock {
+public final class PlaybackClock {
     private static final long NO_TIMESTAMP = -1;
 
     private long firstTimestampUs = NO_TIMESTAMP;
@@ -17,7 +17,7 @@ final class PlaybackClock {
         pauseStartedNs = 0;
     }
 
-    synchronized void latchFirstFrame(long mediaTimestampUs, boolean paused) {
+    public synchronized void latchFirstFrame(long mediaTimestampUs, boolean paused) {
         if (firstTimestampUs != NO_TIMESTAMP) {
             return;
         }
@@ -41,7 +41,7 @@ final class PlaybackClock {
         pauseStartedNs = 0;
     }
 
-    synchronized long targetTimeNs(long mediaTimestampUs) {
+    public synchronized long targetTimeNs(long mediaTimestampUs) {
         if (firstTimestampUs == NO_TIMESTAMP || startNs <= 0) {
             return 0;
         }

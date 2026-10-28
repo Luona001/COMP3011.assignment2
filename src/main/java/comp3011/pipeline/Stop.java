@@ -1,5 +1,7 @@
 package comp3011.pipeline;
 
-public class Stop {
-
+/**
+ * Request the decode thread to stop.
+ */
+public record Stop() implements DecodeCommand {
 }

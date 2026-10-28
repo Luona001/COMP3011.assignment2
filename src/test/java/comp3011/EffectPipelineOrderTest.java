@@ -16,10 +16,10 @@ import static org.junit.jupiter.api.Assertions.*;
 class EffectPipelineOrderTest {
 
 	private static final class Tag extends FrameProcessor {
-        private final StringBuilder sb;
+        private final StringBuffer sb;
         private final String tag;
 
-        Tag(StringBuilder sb, String tag) {
+        Tag(StringBuffer sb, String tag) {
             this.sb = sb;
             this.tag = tag;
         }
@@ -36,7 +36,7 @@ class EffectPipelineOrderTest {
 
     @Test
     void framesKeepOrderAndProcessorsRunInChainOrder() throws Exception {
-        StringBuilder sb = new StringBuilder();
+    	StringBuffer sb = new StringBuffer();
         List<FrameProcessor> chain = List.of(
                 new Tag(sb, "A"), new Tag(sb, "B"), new Tag(sb, "C"));
         PlaybackClock clock = new PlaybackClock();
@@ -70,7 +70,7 @@ class EffectPipelineOrderTest {
 
     @Test
     void framesFromOldEpochAreDroppedAfterSeek() throws Exception {
-        StringBuilder sb = new StringBuilder();
+    	StringBuffer sb = new StringBuffer();
         List<FrameProcessor> chain = List.of(new Tag(sb, "X"));
         PlaybackClock clock = new PlaybackClock();
         AtomicLong epoch = new AtomicLong(0);

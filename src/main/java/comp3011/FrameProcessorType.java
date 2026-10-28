@@ -1,3 +1,11 @@
+/*
+ * COMP3011 Assignment 2 - effect types and their command-line flags.
+ *
+ * Authors:
+ *   1. An Nhu Luong - a1953283
+ *
+ * Copyright 2026 Simon Ratcliffe
+ */
 package comp3011;
 
 import java.util.function.Supplier;

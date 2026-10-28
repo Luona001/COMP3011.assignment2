@@ -1,4 +1,11 @@
-
+/*
+ * COMP3011 Assignment 2 - deep copy of JavaCV frame image planes.
+ *
+ * Authors:
+ *   1. An Nhu Luong - a1953283
+ *
+ * Copyright 2026 Simon Ratcliffe
+ */
 package comp3011;
 
 import java.nio.Buffer;

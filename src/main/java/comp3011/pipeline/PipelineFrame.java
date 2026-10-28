@@ -1,5 +1,12 @@
+
 package comp3011.pipeline;
 
-public class PipelineFrame {
+import org.bytedeco.javacv.Frame;
 
+public record PipelineFrame(
+        Frame frame,
+        int frameNumber,
+        long mediaTimestampUs,
+        long targetTimeNs,
+        long epoch) {
 }

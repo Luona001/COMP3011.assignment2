@@ -34,6 +34,7 @@ public final class VideoDecoder extends Thread {
     private volatile boolean running = true;
     private volatile Exception error;
     private boolean processorsInitialised;
+    private boolean grabSingleFrame;
 
     @FunctionalInterface
     public interface AudioSampleSink {
@@ -125,7 +126,7 @@ public final class VideoDecoder extends Thread {
                 break;
             }
 
-            if (paused) {
+            if (paused && !grabSingleFrame) {
                 Thread.sleep(5);
                 continue;
             }
@@ -168,19 +169,25 @@ public final class VideoDecoder extends Thread {
                     break;
                 }
                 if (frameEpoch != epoch.get()) {
+                    grabSingleFrame = false;
                     break;
                 }
             }
+            grabSingleFrame = false;
         }
     }
 
     private void processCommands() throws Exception {
         DecodeCommand command;
         while ((command = commands.poll()) != null) {
-            if (command instanceof SeekTo seek) {
+        	if (command instanceof SeekTo seek) {
                 grabber.setTimestamp(seek.grabTimestampUs());
-            } else if (command instanceof SetPaused pauseCommand) {
-                paused = pauseCommand.paused();
+                grabSingleFrame = true;
+        	 } else if (command instanceof SetPaused pauseCommand) {
+                 paused = pauseCommand.paused();
+                 if (!paused) {
+                     grabSingleFrame = false;
+                 }
             } else if (command instanceof Stop) {
                 running = false;
                 return;

@@ -49,7 +49,7 @@ public final class PlaybackClock {
         return startNs + relativeUs * 1_000L;
     }
 
-    synchronized long logicalTimestampUs(long mediaTimestampUs) {
+    public synchronized long logicalTimestampUs(long mediaTimestampUs) {
         if (firstTimestampUs == NO_TIMESTAMP) {
             return logicalBaseUs;
         }
